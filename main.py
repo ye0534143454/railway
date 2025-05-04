@@ -7,7 +7,7 @@ from pydrive2.drive import GoogleDrive
 def download_video(url):
     options = {
         'outtmpl': 'video.mp4',
-        'format': 'best'
+        'format': 'worst'
     }
     with yt_dlp.YoutubeDL(options) as ydl:
         ydl.download([url])
