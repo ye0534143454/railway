@@ -1,3 +1,5 @@
+import json
+import os
 import yt_dlp
 from pydrive2.auth import GoogleAuth
 from pydrive2.drive import GoogleDrive
@@ -9,20 +11,38 @@ def download_video(url):
     }
     with yt_dlp.YoutubeDL(options) as ydl:
         ydl.download([url])
-    print("✅ הסרטון ירד בהצלחה!")
 
 def upload_to_drive():
-    gauth = GoogleAuth()
-    gauth.LocalWebserverAuth()
-    drive = GoogleDrive(gauth)
+    # שלב 1: קרא את מחרוזת ה־JSON מתוך משתנה סביבה
+    client_secrets_str = os.environ.get('CLIENT_SECRETS_JSON')
+    if not client_secrets_str:
+        raise ValueError("❌ משתנה הסביבה CLIENT_SECRETS_JSON לא מוגדר")
 
-    f = drive.CreateFile({'title': 'video.mp4'})
-    f.SetContentFile('video.mp4')
-    f.Upload()
-    print("✅ הועלה ל־Drive בהצלחה")
+    # שלב 2: כתוב את המחרוזת לקובץ זמני
+    with open("client_secrets.json", "w") as f:
+        f.write(client_secrets_str)
+
+    try:
+        # שלב 3: התחברות לגוגל
+        gauth = GoogleAuth()
+        gauth.LocalWebserverAuth()
+        drive = GoogleDrive(gauth)
+
+        # שלב 4: העלאה לדרייב
+        f = drive.CreateFile({'title': 'video.mp4'})
+        f.SetContentFile('video.mp4')
+        f.Upload()
+        print("✅ הועלה ל־Drive בהצלחה")
+    finally:
+        # שלב 5: מחק את הקובץ הרגיש
+        os.remove("client_secrets.json")
 
 def main():
-    url = "https://www.youtube.com/results?search_query=%D7%9E%D7%93%D7%A8%D7%99%D7%9A%20kerbal%20space%20program%20%D7%91%D7%A2%D7%91%D7%A8%D7%99%D7%AA%20%D7%A4%D7%A8%D7%A7%20%D7%A8%D7%90%D7%A9%D7%95%D7%9F&sp=EgIQAQ%253D%253D"
+    url = os.environ.get("VIDEO_URL")
+    if not url:
+        raise ValueError("❌ משתנה הסביבה VIDEO_URL לא מוגדר")
+
+    download_video(url)
     upload_to_drive()
 
 if __name__ == "__main__":
