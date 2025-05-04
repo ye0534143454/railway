@@ -3,6 +3,7 @@ import os
 import yt_dlp
 from pydrive2.auth import GoogleAuth
 from pydrive2.drive import GoogleDrive
+from pydrive2.auth import GoogleAuth
 
 def download_video(url):
     options = {
@@ -25,7 +26,7 @@ def upload_to_drive():
     try:
         # שלב 3: התחברות לגוגל
         gauth = GoogleAuth()
-        gauth.LocalWebserverAuth()
+        gauth.CommandLineAuth()
         drive = GoogleDrive(gauth)
 
         # שלב 4: העלאה לדרייב
