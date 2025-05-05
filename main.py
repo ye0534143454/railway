@@ -3,70 +3,83 @@ import os
 import yt_dlp
 from pydrive2.auth import GoogleAuth
 from pydrive2.drive import GoogleDrive
+import re
 
-def get_video_info(url):
-    with yt_dlp.YoutubeDL({}) as ydl:
-        info = ydl.extract_info(url, download=False)
-        return info
+def sanitize_filename(title):
+    return re.sub(r'[\\/*?:"<>|]', '_', title)
 
-def download_video(url, filename):
-    options = {
-        'outtmpl': filename,
-        'format': 'worst'
-    }
-    with yt_dlp.YoutubeDL(options) as ydl:
-        ydl.download([url])
-
-def upload_to_drive(local_filename, drive_filename):
-    # קריאה ממחרוזת JSON שמכילה את האישורים
+def get_drive():
     credentials_json_str = os.environ.get('CREDENTIALS_JSON')
     if not credentials_json_str:
-        raise ValueError("❌ משתנה הסביבה CREDENTIALS_JSON לא מוגדר")
+        raise ValueError("Environment variable CREDENTIALS_JSON is not defined")
 
     with open("credentials.json", "w") as f:
         json.dump(json.loads(credentials_json_str), f)
 
-    try:
-        gauth = GoogleAuth()
-        gauth.LoadCredentialsFile("credentials.json")
+    gauth = GoogleAuth()
+    gauth.LoadCredentialsFile("credentials.json")
 
-        if gauth.credentials is None:
-            raise RuntimeError("❌ credentials.json לא תקף")
-        elif gauth.access_token_expired:
-            gauth.Refresh()
-        else:
-            gauth.Authorize()
+    if gauth.credentials is None:
+        raise RuntimeError("Invalid credentials.json")
+    elif gauth.access_token_expired:
+        gauth.Refresh()
+    else:
+        gauth.Authorize()
 
-        drive = GoogleDrive(gauth)
+    os.remove("credentials.json")
+    return GoogleDrive(gauth)
 
-        f = drive.CreateFile({'title': drive_filename})
-        f.SetContentFile(local_filename)
-        f.Upload()
-        print(f"✅ '{drive_filename}' הועלה ל־Drive בהצלחה")
+def upload_to_drive(filepath, filename, drive):
+    f = drive.CreateFile({'title': filename})
+    f.SetContentFile(filepath)
+    f.Upload()
+    print(f"Uploaded: {filename}")
+    os.remove(filepath)
 
-    finally:
-        os.remove("credentials.json")
+def download_video(url, drive):
+    with yt_dlp.YoutubeDL({}) as ydl:
+        info = ydl.extract_info(url, download=False)
+        title = sanitize_filename(info.get("title", "video"))
+        filename = f"{title}.mp4"
 
-def sanitize_filename(title):
-    # מסיר תווים בעייתיים לשמות קבצים
-    import re
-    sanitized = re.sub(r'[\\/*?:"<>|]', '_', title)
-    return sanitized
+    options = {
+        'outtmpl': filename,
+        'format': 'worst[ext=mp4]/worst',
+        'quiet': True
+    }
+    with yt_dlp.YoutubeDL(options) as ydl:
+        ydl.download([url])
+
+    upload_to_drive(filename, filename, drive)
+
+def download_channel(channel_url, drive):
+    ydl_opts = {
+        'quiet': True,
+        'extract_flat': True,
+        'force_generic_extractor': False
+    }
+
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        info = ydl.extract_info(channel_url, download=False)
+        entries = info.get('entries', [])
+        print(f"Found {len(entries)} videos in channel")
+
+        for entry in entries:
+            video_url = f"https://www.youtube.com/watch?v={entry['id']}"
+            download_video(video_url, drive)
 
 def main():
-    url = os.environ.get("VIDEO_URL")
-    if not url:
-        raise ValueError("❌ משתנה הסביבה VIDEO_URL לא מוגדר")
+    video_url = os.environ.get("VIDEO_URL")
+    channel_url = os.environ.get("CHANNEL_URL")
 
-    info = get_video_info(url)
-    video_title = sanitize_filename(info.get("title", "video"))
-    filename = f"{video_title}.mp4"
-
-    download_video(url, filename)
-    upload_to_drive(filename, filename)
-
-    # אופציונלי: מחיקת הקובץ המקומי לאחר העלאה
-    os.remove(filename)
+    if video_url:
+        drive = get_drive()
+        download_video(video_url, drive)
+    elif channel_url:
+        drive = get_drive()
+        download_channel(channel_url, drive)
+    else:
+        raise ValueError("Either VIDEO_URL or CHANNEL_URL must be defined")
 
 if __name__ == "__main__":
     main()
