@@ -4,21 +4,25 @@ import yt_dlp
 from pydrive2.auth import GoogleAuth
 from pydrive2.drive import GoogleDrive
 
-def download_video(url):
+def get_video_info(url):
+    with yt_dlp.YoutubeDL({}) as ydl:
+        info = ydl.extract_info(url, download=False)
+        return info
+
+def download_video(url, filename):
     options = {
-        'outtmpl': 'video.mp4',
-        'format': 'worst'  # איכות הכי נמוכה
+        'outtmpl': filename,
+        'format': 'worst'
     }
     with yt_dlp.YoutubeDL(options) as ydl:
         ydl.download([url])
 
-def upload_to_drive():
-    # קריאה ממחרוזת JSON שמכילה את האישורים (credentials.json)
+def upload_to_drive(local_filename, drive_filename):
+    # קריאה ממחרוזת JSON שמכילה את האישורים
     credentials_json_str = os.environ.get('CREDENTIALS_JSON')
     if not credentials_json_str:
         raise ValueError("❌ משתנה הסביבה CREDENTIALS_JSON לא מוגדר")
 
-    # שמירת הקובץ credentials.json לקובץ זמני
     with open("credentials.json", "w") as f:
         json.dump(json.loads(credentials_json_str), f)
 
@@ -35,21 +39,34 @@ def upload_to_drive():
 
         drive = GoogleDrive(gauth)
 
-        f = drive.CreateFile({'title': 'video.mp4'})
-        f.SetContentFile('video.mp4')
+        f = drive.CreateFile({'title': drive_filename})
+        f.SetContentFile(local_filename)
         f.Upload()
-        print("✅ הועלה ל־Drive בהצלחה")
+        print(f"✅ '{drive_filename}' הועלה ל־Drive בהצלחה")
 
     finally:
-        os.remove("credentials.json")  # מחיקת הקובץ הרגיש
+        os.remove("credentials.json")
+
+def sanitize_filename(title):
+    # מסיר תווים בעייתיים לשמות קבצים
+    import re
+    sanitized = re.sub(r'[\\/*?:"<>|]', '_', title)
+    return sanitized
 
 def main():
     url = os.environ.get("VIDEO_URL")
     if not url:
         raise ValueError("❌ משתנה הסביבה VIDEO_URL לא מוגדר")
 
-    download_video(url)
-    upload_to_drive()
+    info = get_video_info(url)
+    video_title = sanitize_filename(info.get("title", "video"))
+    filename = f"{video_title}.mp4"
+
+    download_video(url, filename)
+    upload_to_drive(filename, filename)
+
+    # אופציונלי: מחיקת הקובץ המקומי לאחר העלאה
+    os.remove(filename)
 
 if __name__ == "__main__":
     main()
