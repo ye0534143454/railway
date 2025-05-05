@@ -71,12 +71,13 @@ def download_channel(channel_url, drive):
 def main():
     video_url = os.environ.get("VIDEO_URL")
     collection_url = os.environ.get("COLLECTION_URL")
+    
     if video_url:
         drive = get_drive()
         download_video(video_url, drive)
-    elif channel_url:
+    elif collection_url:
         drive = get_drive()
-        download_channel(channel_url, drive)
+        download_channel(collection_url, drive)
     else:
         raise ValueError("Either VIDEO_URL or CHANNEL_URL must be defined")
 
