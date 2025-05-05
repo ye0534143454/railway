@@ -56,7 +56,8 @@ def download_channel(channel_url, drive):
     ydl_opts = {
         'quiet': True,
         'extract_flat': True,
-        'force_generic_extractor': False
+        'force_generic_extractor': False,
+        'playliststart': 10
     }
 
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
