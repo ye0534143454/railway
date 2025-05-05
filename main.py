@@ -70,8 +70,7 @@ def download_channel(channel_url, drive):
 
 def main():
     video_url = os.environ.get("VIDEO_URL")
-    channel_url = os.environ.get("CHANNEL_URL")
-
+    collection_url = os.environ.get("COLLECTION_URL")
     if video_url:
         drive = get_drive()
         download_video(video_url, drive)
