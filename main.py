@@ -98,7 +98,7 @@ def download_channel(channel_url, drive):
         'quiet': True,
         'extract_flat': True,
         'force_generic_extractor': False,
-        'playliststart': 15
+        'playliststart': 1
     }
 
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
