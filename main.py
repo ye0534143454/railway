@@ -37,21 +37,32 @@ def upload_to_drive(filepath, filename, drive):
     os.remove(filepath)
 
 def download_video(url, drive):
-    media_type = os.environ.get("MEDIA_TYPE", "audio")  # ברירת מחדל היא audio
-
-    with yt_dlp.YoutubeDL({}) as ydl:
-        info = ydl.extract_info(url, download=False)
-        title = sanitize_filename(info.get("title", "media"))
-        ext = "mp4" if media_type == "video" else info.get("ext", "m4a")
-        filename = f"{title}.{ext}"
+    media_type = os.environ.get("MEDIA_TYPE", "audio")
 
     if media_type == "video":
+        with yt_dlp.YoutubeDL({}) as ydl:
+            info = ydl.extract_info(url, download=False)
+            title = sanitize_filename(info.get("title", "video"))
+            filename = f"{title}.mp4"
+
         options = {
             'outtmpl': filename,
             'format': 'worst[ext=mp4]/worst',
             'quiet': True
         }
     else:
+        options_probe = {
+            'quiet': True,
+            'skip_download': True
+        }
+        with yt_dlp.YoutubeDL(options_probe) as ydl:
+            info = ydl.extract_info(url, download=False)
+            title = sanitize_filename(info.get("title", "audio"))
+            formats = info.get("formats", [])
+            best_audio = next((f for f in formats if f.get("vcodec") == "none"), {})
+            ext = best_audio.get("ext", "m4a")
+            filename = f"{title}.{ext}"
+
         options = {
             'outtmpl': filename,
             'format': 'bestaudio/best',
