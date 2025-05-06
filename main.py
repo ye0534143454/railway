@@ -65,7 +65,7 @@ def download_video(url, drive):
 
         options = {
             'outtmpl': filename,
-            'format': 'bestaudio/best',
+            'format': 'bestaudio/worst',
             'quiet': True,
             'postprocessors': []
         }
