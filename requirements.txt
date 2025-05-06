@@ -1,3 +1,2 @@
 yt-dlp
 pydrive2
-ffmpeg

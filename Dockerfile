@@ -1,17 +1,19 @@
-# השתמש בבסיס פייתון
 FROM python:3.11-slim
 
-# צור תיקיית עבודה
 WORKDIR /app
 
-# העתק את הדרישות קודם - שלב זה ינצל cache אם הדרישות לא השתנו
-COPY requirements.txt .
+# התקנת ffmpeg (וחבילות מינימליות שצריך כדי שהוא ירוץ)
+RUN apt-get update && \
+    apt-get install -y ffmpeg && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
-# התקן את התלויות
+# התקנת חבילות פייתון
+COPY requirements.txt .
 RUN pip install --upgrade pip && pip install -r requirements.txt
 
-# עכשיו העתק את שאר הקוד
+# העתקת קוד הפרויקט
 COPY . .
 
-# הפקודה שתורץ כשמפעילים את הקונטיינר
+# הפעלת הקוד הראשי
 CMD ["python", "main.py"]
