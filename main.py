@@ -37,7 +37,7 @@ def upload_to_drive(filepath, filename, drive):
     os.remove(filepath)
 
 def download_video(url, drive):
-    media_type = os.environ.get("MEDIA_TYPE", "audio")
+    media_type = os.environ.get("MEDIA_TYPE", "audio")  # ברירת מחדל היא audio
 
     if media_type == "video":
         with yt_dlp.YoutubeDL({}) as ydl:
@@ -50,6 +50,24 @@ def download_video(url, drive):
             'format': 'worst[ext=mp4]/worst',
             'quiet': True
         }
+
+    elif media_type == "mp3":
+        with yt_dlp.YoutubeDL({}) as ydl:
+            info = ydl.extract_info(url, download=False)
+            title = sanitize_filename(info.get("title", "audio"))
+            filename = f"{title}.mp3"
+
+        options = {
+            'outtmpl': filename,
+            'format': 'bestaudio/worst',
+            'quiet': True,
+            'postprocessors': [{
+                'key': 'FFmpegExtractAudio',
+                'preferredcodec': 'mp3',
+                'preferredquality': '192',
+            }]
+        }
+
     else:
         options_probe = {
             'quiet': True,
@@ -80,7 +98,7 @@ def download_channel(channel_url, drive):
         'quiet': True,
         'extract_flat': True,
         'force_generic_extractor': False,
-        'playliststart': 1
+        'playliststart': 15
     }
 
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
