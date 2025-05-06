@@ -37,89 +37,55 @@ def upload_to_drive(filepath, filename, drive):
     os.remove(filepath)
 
 def download_video(url, drive):
-    media_type = os.environ.get("MEDIA_TYPE", "audio")  # ברירת מחדל היא audio
+    with yt_dlp.YoutubeDL({}) as ydl:
+        info = ydl.extract_info(url, download=False)
+        title = sanitize_filename(info.get("title", "video"))
+        filename = f"{title}.mp4"
 
-    if media_type == "video":
-        with yt_dlp.YoutubeDL({}) as ydl:
-            info = ydl.extract_info(url, download=False)
-            title = sanitize_filename(info.get("title", "video"))
-            filename = f"{title}.mp4"
-
-        options = {
-            'outtmpl': filename,
-            'format': 'best',
-            'quiet': True
-        }
-
-    elif media_type == "mp3":
-        with yt_dlp.YoutubeDL({}) as ydl:
-            info = ydl.extract_info(url, download=False)
-            title = sanitize_filename(info.get("title", "audio"))
-            filename = f"{title}.mp3"
-
-        options = {
-            'outtmpl': filename,
-            'format': 'bestaudio/worst',
-            'quiet': True,
-            'postprocessors': [{
-                'key': 'FFmpegExtractAudio',
-                'preferredcodec': 'mp3',
-                'preferredquality': '192',
-            }]
-        }
-
-    else:
-        options_probe = {
-            'quiet': True,
-            'skip_download': True
-        }
-        with yt_dlp.YoutubeDL(options_probe) as ydl:
-            info = ydl.extract_info(url, download=False)
-            title = sanitize_filename(info.get("title", "audio"))
-            formats = info.get("formats", [])
-            best_audio = next((f for f in formats if f.get("vcodec") == "none"), {})
-            ext = best_audio.get("ext", "m4a")
-            filename = f"{title}.{ext}"
-
-        options = {
-            'outtmpl': filename,
-            'format': 'bestaudio/worst',
-            'quiet': True,
-            'postprocessors': []
-        }
-
+    options = {
+        'outtmpl': filename,
+        'format': 'worst[ext=mp4]/worst',
+        'quiet': True
+    }
     with yt_dlp.YoutubeDL(options) as ydl:
         ydl.download([url])
 
     upload_to_drive(filename, filename, drive)
 
 def download_channel(channel_url, drive):
+    start_index = int(os.environ.get("PLAYLIST_START", 1))
+    end_index = os.environ.get("PLAYLIST_END")
+    if end_index:
+        end_index = int(end_index)
+
     ydl_opts = {
         'quiet': True,
         'extract_flat': True,
-        'force_generic_extractor': False,
-        'playliststart': 1
+        'playliststart': start_index
     }
+    if end_index:
+        ydl_opts['playlistend'] = end_index
 
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         info = ydl.extract_info(channel_url, download=False)
         entries = info.get('entries', [])
-        print(f"Found {len(entries)} videos in channel")
+        print(f"Found {len(entries)} videos in collection")
 
         for entry in entries:
             video_url = f"https://www.youtube.com/watch?v={entry['id']}"
             download_video(video_url, drive)
 
+
 def main():
     video_url = os.environ.get("VIDEO_URL")
-    collection_url = os.environ.get("COLLECTION_URL")
+    channel_url = os.environ.get("CHANNEL_URL")
 
     if video_url:
         drive = get_drive()
         download_video(video_url, drive)
-    elif collection_url:
+    elif channel_url:
         drive = get_drive()
-        download_channel(collection_url, drive)
+        download_channel(channel_url, drive)
     else:
         raise ValueError("Either VIDEO_URL or CHANNEL_URL must be defined")
 
