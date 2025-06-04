@@ -80,6 +80,8 @@ def download_channel(channel_url, drive):
 def main():
     video_url = os.environ.get("VIDEO_URL")
     channel_url = os.environ.get("CHANNEL_URL")
+    print("VIDEO_URL:", video_url)
+    print("CHANNEL_URL:", channel_url)
 
     if video_url:
         drive = get_drive()
