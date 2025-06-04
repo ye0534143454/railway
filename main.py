@@ -83,7 +83,7 @@ def main():
     print("VIDEO_URL:", video_url)
     print("CHANNEL_URL:", channel_url)
 
-    if video_url:
+    if video_url != "":
         drive = get_drive()
         download_video(video_url, drive)
     elif channel_url:
