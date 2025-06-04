@@ -53,6 +53,7 @@ def download_video(url, drive):
     upload_to_drive(filename, filename, drive)
 
 def download_channel(channel_url, drive):
+    print (channel_url)
     start_index = int(os.environ.get("PLAYLIST_START", 1))
     end_index = os.environ.get("PLAYLIST_END")
     if end_index:
